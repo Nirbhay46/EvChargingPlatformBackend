@@ -1,0 +1,82 @@
+# Infrastructure only — MySQL, Redis, Kafka, Zipkin, LocalStack
+# Run from backend/: docker compose up -d
+# For full stack (infra + services): docker compose -f ../infra/docker-compose.full.yml up --build
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_PASSWORD: root
+    ports: ["3307:3306"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: unless-stopped
+    ports: ["6379:6379"]
+    volumes: [redis_data:/data]
+
+  localstack:
+    image: localstack/localstack:3.8.1
+    container_name: localstack
+    restart: unless-stopped
+    ports: ["4566:4566"]
+    environment:
+      SERVICES: "s3,sqs,sns,dynamodb,ses"
+      AWS_DEFAULT_REGION: ap-southeast-2
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      DEBUG: "1"
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../infra/localstack-init:/etc/localstack/init/ready.d
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports: ["2181:2181"]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    restart: unless-stopped
+    depends_on: [zookeeper]
+    ports: ["9092:9092", "29092:29092"]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    restart: unless-stopped
+    depends_on: [kafka]
+    ports: ["8090:8080"]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    restart: unless-stopped
+    ports: ["9411:9411"]
+
+volumes:
+  mysql_data:
+  redis_data:
+  localstack_data:

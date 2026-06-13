@@ -1,0 +1,17 @@
+io/evcharge/user/exception/GlobalExceptionHandler$ErrorResponse.class
+io/evcharge/user/domain/UserAccount$UserAccountBuilder.class
+io/evcharge/user/domain/UserAccount.class
+io/evcharge/user/UserServiceApplication.class
+io/evcharge/user/exception/ApiException.class
+io/evcharge/user/service/AuthService.class
+io/evcharge/user/exception/GlobalExceptionHandler.class
+io/evcharge/user/api/dto/LoginRequest.class
+io/evcharge/user/api/dto/RegisterRequest.class
+io/evcharge/user/api/dto/AuthResponse.class
+io/evcharge/user/config/AdminSeeder.class
+io/evcharge/user/service/UserService.class
+io/evcharge/user/domain/Role.class
+io/evcharge/user/config/SecurityConfig.class
+io/evcharge/user/api/dto/UserResponse.class
+io/evcharge/user/api/UserController.class
+io/evcharge/user/repo/UserRepository.class

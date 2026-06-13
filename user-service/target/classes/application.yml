@@ -1,0 +1,54 @@
+server:
+  port: 8081
+  error:
+    include-message: always
+
+spring:
+  application:
+    name: user-service
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3307/userdb?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:change-me-please-use-a-very-long-random-string-32+chars}
+    # 20 minutes (per user choice)
+    expiration-ms: 1200000
+    issuer: ev-charging-platform
+
+app:
+  admin:
+    email: ${ADMIN_EMAIL:admin@evcharge.io}
+    password: ${ADMIN_PASSWORD:Admin@12345}
+
+management:
+  endpoints:
+    web:
+      exposure: { include: health, info, prometheus }
+  tracing:
+    sampling: { probability: 1.0 }
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}]"

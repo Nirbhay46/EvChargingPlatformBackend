@@ -1,0 +1,78 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+            # Redis-backed token-bucket rate limiter (Spring Cloud Gateway).
+            # • replenishRate = 1 req/sec ≈ 60 req/min sustained
+            # • burstCapacity = 100 (allow short bursts)
+            # • Key is X-User-Id if present, else client IP (see UserKeyResolver).
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 1
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns: "*"
+                allowedMethods: "*"
+                allowedHeaders: "*"
+                allowCredentials: true
+          routes:
+            - id: user-service
+              uri: ${USER_SERVICE_URL:http://localhost:8081}
+              predicates: [ Path=/api/users/** ]
+            - id: station-service
+              uri: ${STATION_SERVICE_URL:http://localhost:8082}
+              predicates: [ Path=/api/stations/** ]
+            - id: booking-service
+              uri: ${BOOKING_SERVICE_URL:http://localhost:8083}
+              predicates: [ Path=/api/bookings/** ]
+              filters:
+                # Authenticated routes get a higher budget (2/sec ≈ 120/min, burst 200).
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 2
+                    redis-rate-limiter.burstCapacity: 200
+                    key-resolver: "#{@userKeyResolver}"
+            - id: payment-service
+              uri: ${PAYMENT_SERVICE_URL:http://localhost:8084}
+              predicates: [ Path=/api/payments/** ]
+            - id: notification-service
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8085}
+              predicates: [ Path=/api/notifications/** ]
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:change-me-please-use-a-very-long-random-string-32+chars}
+    # 20 minutes (per user choice)
+    expiration-ms: 1200000
+    issuer: ev-charging-platform
+
+management:
+  endpoints:
+    web:
+      exposure: { include: health, info, prometheus, gateway }
+  tracing:
+    sampling: { probability: 1.0 }
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
